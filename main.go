@@ -100,6 +100,11 @@ func main() {
 	hasblock := make(map[string]string)
 	for i := range list {
 		for {
+
+			if len(list[i].txid) == 0 {
+				continue
+			}
+
 			if value, ok := hasblock[list[i].txid]; ok {
 				list[i].blockHash = value
 				continue
