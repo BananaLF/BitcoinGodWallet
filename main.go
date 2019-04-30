@@ -62,12 +62,14 @@ func main() {
 		cfg = chaincfg.TestNet3Params
 	}
 	readFileName := path + fileName
+	log.Println("Read data file")
 	list, err := ReadCSV(readFileName)
 	if err != nil {
 		log.Fatalf("error ReadCSV: %v", err)
 		return
 	}
 
+	log.Println("Start to send GOD")
 	length := len(list)
 	for start := 0; start < length; start += windows {
 		receivers := make(map[btcutil.Address]btcutil.Amount)
@@ -94,14 +96,24 @@ func main() {
 			log.Fatalf("error SendMany: %v", err)
 			return
 		}
+		log.Println("waiting to write hasSend addresses file")
 		hasSendFileName := path + "/hasSend" + strconv.Itoa(start+1) + "-" + strconv.Itoa(end) + ".csv"
 		if err := WriteCSV(list[start:end], hasSendFileName); err != nil {
 			log.Fatalf("error temptxid WriteCSVTx: %v", err)
 			return
 		}
-		log.Println("")
+		log.Println("send success")
 	}
 
+	log.Println("Success send GOD")
+	log.Println("Writing to result file")
+	resultFileName := path + "/result.csv"
+	if err := WriteCSV(list, resultFileName); err != nil {
+		log.Fatalf("error result WriteCSV: %v", err)
+		return
+	}
+
+	log.Println("Statistics result")
 	errAddress := 0
 	for i := range list {
 		if len(list[i].txid) == 0 {
@@ -109,49 +121,6 @@ func main() {
 		}
 	}
 	log.Println("success send to addresses: %v,error address:%v", (len(list) - errAddress), errAddress)
-	tempTxidFileName := path + "/temptxid.csv"
-	if err := WriteCSV(list, tempTxidFileName); err != nil {
-		log.Fatalf("error temptxid WriteCSVTx: %v", err)
-		return
-	}
-
-	/*time.Sleep(time.Duration(150) * time.Second)
-	hasblock := make(map[string]string)
-	for i := range list {
-		for {
-
-			if len(list[i].txid) == 0 {
-				continue
-			}
-
-			if value, ok := hasblock[list[i].txid]; ok {
-				list[i].blockHash = value
-				continue
-			}
-
-			txSha, err := chainhash.NewHashFromStr(list[i].txid)
-			if err != nil {
-				break
-			}
-			txResult, err := client.GetTransaction(txSha)
-			if err != nil {
-				log.Println("error GetTransaction: %v", err)
-				time.Sleep(time.Duration(150) * time.Second)
-				continue
-			}
-			if txResult.Confirmations != 0 {
-				list[i].blockHash = txResult.BlockHash
-				break
-			}
-			time.Sleep(time.Duration(150) * time.Second)
-		}
-	}*/
-
-	resultFileName := path + "/result.csv"
-	if err := WriteCSV(list, resultFileName); err != nil {
-		log.Fatalf("error result WriteCSV: %v", err)
-		return
-	}
 }
 
 func ConvertToMap(list []Result, receivers map[btcutil.Address]btcutil.Amount, cfg *chaincfg.Params) error {
@@ -204,7 +173,7 @@ func SendMany(client *btcrpcclient.Client, receivers map[btcutil.Address]btcutil
 		}
 	}
 	log.Println("tx:", txSha.String())
-	log.Println("tx is waiting for pushing to block")
+	log.Println("waiting for pushing to block")
 	blockHash := "null"
 	//wait transaction is pushed into block
 	for {
