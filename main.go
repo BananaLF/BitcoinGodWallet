@@ -123,6 +123,27 @@ func main() {
 		return
 	}
 
+	var sumOut float64 = 0
+	var lastOut float64 = 0
+	var sumValidAddress int = 0
+	var sumInvaliAddress int = 0
+	for i := 0; i < length;i++ {
+		money, err := strconv.ParseFloat(list[i].amount, 64)
+		if err != nil {
+			log.Fatalf("error statictis: %v", err)
+			return
+		}
+
+		if len(list[i].txid) == 0 {
+			lastOut += money
+			sumInvaliAddress++
+		} else {
+			sumOut += money
+			sumValidAddress++
+		}
+	}
+	log.Println("有效地址数:%d,有效输出:%d",sumValidAddress,sumOut)
+	log.Println("无效地址数:%d,无效输出:%d",sumInvaliAddress,lastOut)
 	/*errAddress := 0
 	for i := range list {
 		if len(list[i].txid) == 0 {
