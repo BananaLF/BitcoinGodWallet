@@ -102,7 +102,7 @@ func main() {
 			log.Fatalf("error temptxid WriteCSVTx: %v", err)
 			return
 		}
-		log.Println("send success")
+		log.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>send success")
 	}
 
 	log.Println("Success send GOD")
@@ -114,13 +114,32 @@ func main() {
 	}
 
 	log.Println("Statistics result")
-	errAddress := 0
-	for i := range list {
+	Statistics(list)
+}
+
+func Statistics(list []Result) {
+	length := len(list)
+	var sumOut float64 = 0
+	var lastOut float64 = 0
+	var sumValidAddress int = 0
+	var sumInvaliAddress int = 0
+	for i := 1; i < length; i++ {
+		money, err := strconv.ParseFloat(list[i].amount, 64)
+		if err != nil {
+			log.Fatalf("error statictis: %v", err)
+			return
+		}
+
 		if len(list[i].txid) == 0 {
-			errAddress += 1
+			lastOut += money
+			sumInvaliAddress++
+		} else {
+			sumOut += money
+			sumValidAddress++
 		}
 	}
-	log.Println("success send to addresses: %v,error address:%v", (len(list) - errAddress), errAddress)
+	log.Println("有效地址数:", sumValidAddress, "有效输出:", sumOut)
+	log.Println("无效地址数:", sumInvaliAddress, "无效输出", lastOut)
 }
 
 func ConvertToMap(list []Result, receivers map[btcutil.Address]btcutil.Amount, cfg *chaincfg.Params) error {
