@@ -201,7 +201,13 @@ func SendMany(client *btcrpcclient.Client, receivers map[btcutil.Address]btcutil
 			return err
 		}
 		if txResult.Confirmations != 0 {
+			index := start/windows + 1
+			rawTxfile := path + "/tx" + strconv.Itoa(index)
+			log.Println("write tx file:", rawTxfile)
 			blockHash = txResult.BlockHash
+			if err = ioutil.WriteFile(rawTxfile, []byte(txResult.Hex), os.ModeAppend); err != nil {
+				log.Println("error Write Tx hex:", err)
+			}
 			break
 		}
 		time.Sleep(time.Duration(10) * time.Second)
