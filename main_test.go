@@ -17,6 +17,11 @@ import (
 
 var transaction = [][]byte{}
 
+type ResultStattisics struct {
+	amount btcutil.Amount
+	number int
+}
+
 func TestResult(t *testing.T) {
 	client, err := btcrpcclient.New(&btcrpcclient.ConnConfig{
 		HTTPPostMode: true,
@@ -122,6 +127,78 @@ func TestResult(t *testing.T) {
 	t.Log("无效地址数:", sumInvaliAddress, "无效输出", lastOut)
 }
 
+func TestStatistics(t *testing.T) {
+	list := make([]Result, 0)
+	//Read raw transaction
+	for i := 1; i <= 3; i++ {
+		log.Println("--------------Read file:", i)
+		rawTxfile := "/Users/lifei/Desktop" + "/result" + strconv.Itoa(i) + ".csv"
+		result, err := ReadResultCSV(rawTxfile)
+		if err != nil {
+			log.Fatalf("error ReadCSV: %v", err)
+			return
+		}
+		list = append(list, result...)
+	}
+	cfg := chaincfg.MainNetParams
+	cfg.PubKeyHashAddrID = 97
+	cfg.ScriptHashAddrID = 23
+	Statisics(list, &cfg)
+}
+
+func Statisics(list []Result, cfg *chaincfg.Params) error {
+	temp := make(map[string]ResultStattisics)
+	for i := range list {
+		money, err := strconv.ParseFloat(list[i].amount, 64)
+		if err != nil {
+			log.Println("error read csv file convert amount int address:", list[i].String(), "--error:", err)
+			continue
+		}
+		amount, err := btcutil.NewAmount(money)
+		if err != nil {
+			log.Println("error read csv file convert amount float64 address:", list[i].String(), "--error:", err)
+			return err
+		}
+		_, err = btcutil.DecodeAddress(list[i].address, cfg)
+		if err != nil {
+			log.Println("error read csv file convert address:", list[i].address, "--error:", err)
+			continue
+		}
+
+		if _, ok := temp[list[i].address]; ok {
+			resultStatisics := temp[list[i].address]
+			resultStatisics.amount += amount
+			resultStatisics.number++
+			temp[list[i].address] = resultStatisics
+		} else {
+			resultStatisics := ResultStattisics{amount, 1}
+			temp[list[i].address] = resultStatisics
+		}
+	}
+
+	f, err := os.Create("/Users/lifei/Desktop/statisics.csv") //创建文件
+	if err != nil {
+		panic(err)
+		return err
+	}
+	defer f.Close()
+
+	f.WriteString("\xEF\xBB\xBF") // 写入UTF-8 BOM
+
+	w := csv.NewWriter(f) //创建一个新的写入文件流
+	data := make([][]string, 0)
+	for k, v := range temp {
+		line := make([]string, 0)
+		line = append(line, k)
+		line = append(line, v.amount.String())
+		line = append(line, strconv.Itoa(v.number))
+		data = append(data, line)
+	}
+
+	w.WriteAll(data) //写入数据
+	w.Flush()
+	return nil
+}
 func ReadRawTransaction(file string) ([]byte, error) {
 	f, err := os.Open(file)
 	if err != nil {
